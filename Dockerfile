@@ -65,6 +65,6 @@ RUN mkdir -p /home/code-server
 
 RUN curl https://raw.githubusercontent.com/jesseduffield/lazydocker/master/scripts/install_update_linux.sh | bash
 
-RUN usermod -d /var/www root
+COPY config/passwd /etc/passwd
 
 CMD /usr/sbin/sshd -f /etc/ssh/sshd_config -D
