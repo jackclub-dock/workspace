@@ -1,7 +1,10 @@
-FROM codercom/code-server
+ARG LARADOCK_PHP_VERSION=8.0
+FROM laradock/workspace:latest-${LARADOCK_PHP_VERSION}
 
-FROM ubuntu:bionic
 MAINTAINER jack "958691165@qq.com"
+
+# Set Environment Variables
+ENV DEBIAN_FRONTEND noninteractive
 
 USER root
 
@@ -9,62 +12,140 @@ USER root
 RUN ln -sf /usr/share/zoneinfo/Asia/Shanghai /etc/localtime \
     && echo 'Asia/Shanghai' >/etc/timezone
 
-ADD sources.list /etc/apt/
-ARG ROOT_PASSWORD=mj123456
+ARG PUID=1000
+ARG PGID=1000
 
-RUN apt update \
-    && apt install -yqq sudo vim less libltdl7 git \
-    && apt install -yqq php php-xml php-json php-mysql \
-        php-mbstring php-xdebug composer php-redis unzip \
-        php-zip php-tokenizer php-intl php-curl php-gd php-bcmath \
-        php-dev \
-    && composer global require slince/composer-registry-manager \
-    && composer repo:use aliyun \
-    && apt install -yqq mysql-client \
-    && apt install -yqq openssh-server \
-    && echo "${ROOT_PASSWORD}\n${ROOT_PASSWORD}\n" | passwd root \
-    && apt install -yqq openssl net-tools locales \
-    && locale-gen en_US.UTF-8
 
-ENV LANG=en_US.UTF-8
-ADD ./config/sshd_config /etc/ssh/
+# always run apt update when start and after add new source list, then clean up at end.
+RUN set -xe; \
+    apt-get update -yqq && \
+    pecl channel-update pecl.php.net && \
+    groupadd -g ${PGID} laradock && \
+    useradd -l -u ${PUID} -g laradock -m laradock -G docker_env && \
+    usermod -p "*" laradock -s /bin/bash && \
+    apt-get install -yqq \
+      apt-utils \
+      #
+      #--------------------------------------------------------------------------
+      # Mandatory Software's Installation
+      #--------------------------------------------------------------------------
+      #
+      # Mandatory Software's such as ("php-cli", "git", "vim", ....) are
+      # installed on the base image 'laradock/workspace' image. If you want
+      # to add more Software's or remove existing one, you need to edit the
+      # base image (https://github.com/Laradock/workspace).
+      #
+      # next lines are here because there is no auto build on dockerhub see https://github.com/laradock/laradock/pull/1903#issuecomment-463142846
+      libzip-dev zip unzip \
+      # Install the zip extension
+      php${LARADOCK_PHP_VERSION}-zip \
+      # nasm
+      nasm && \
+      php -m | grep -q 'zip'
 
-ENV TERM=xterm
+COPY ./aliases.sh /root/aliases.sh
+COPY ./aliases.sh /home/laradock/aliases.sh
 
-RUN apt install -yqq curl \
-    && curl -o- https://raw.githubusercontent.com/creationix/nvm/v0.33.11/install.sh | bash \
-    && apt install -yqq redis-tools
+RUN sed -i 's/\r//' /root/aliases.sh && \
+    sed -i 's/\r//' /home/laradock/aliases.sh && \
+    chown laradock:laradock /home/laradock/aliases.sh && \
+    echo "" >> ~/.bashrc && \
+    echo "# Load Custom Aliases" >> ~/.bashrc && \
+    echo "source ~/aliases.sh" >> ~/.bashrc && \
+	  echo "" >> ~/.bashrc
 
-ENV NVM_DIR /root/.nvm
-RUN \[ -s "$NVM_DIR/nvm.sh" \] && \. $NVM_DIR/nvm\.sh && \
-    nvm install v10.15.1 && \
-    npm i -g cnpm && \
-    npm i -g yarn
+USER laradock
 
-WORKDIR /root
-RUN git clone https://github.com/swoole/swoole-src.git && \
-       cd swoole-src && \
-       git checkout v4.3.3 && \
-       phpize && \
-       ./configure --enable-openssl --enable-sockets && \
-       make && make install
+RUN echo "" >> ~/.bashrc && \
+    echo "# Load Custom Aliases" >> ~/.bashrc && \
+    echo "source ~/aliases.sh" >> ~/.bashrc && \
+	  echo "" >> ~/.bashrc
 
-RUN echo "[swoole]\nextension = swoole.so" > /etc/php/7.2/cli/conf.d/swoole.ini \
-    && wget https://phar.phpunit.de/phpunit-7.0.phar && \
-    chmod +x phpunit-7.0.phar && \
-    mv phpunit-7.0.phar /usr/local/bin/phpunit
+USER root
 
-RUN mkdir -p /run/sshd
+# Add the composer.json
+COPY ./composer.json /home/laradock/.composer/composer.json
 
-COPY --from=0 /usr/local/bin/code-server /usr/local/bin/code-server
-RUN chmod +x /usr/local/bin/code-server
 
-RUN echo "fs.inotify.max_user_watches=524288" >> /etc/sysctl.conf
+# Make sure that ~/.composer belongs to laradock
+RUN chown -R laradock:laradock /home/laradock/.composer
 
-RUN mkdir -p /home/code-server
+# Export composer vendor path
+RUN echo "" >> ~/.bashrc && \
+    echo 'export PATH="$HOME/.composer/vendor/bin:$PATH"' >> ~/.bashrc
 
-RUN curl https://raw.githubusercontent.com/jesseduffield/lazydocker/master/scripts/install_update_linux.sh | bash
+# Update composer
+ARG COMPOSER_VERSION=2
+RUN set -eux; \
+      if [ "$COMPOSER_VERSION" = "1" ] || [ "$COMPOSER_VERSION" = "2" ]; then \
+          composer self-update --${COMPOSER_VERSION}; \
+      else \
+          composer self-update ${COMPOSER_VERSION}; \
+      fi
 
-COPY config/passwd /etc/passwd
+# add ./vendor/bin to non-root user's bashrc (needed for phpunit)
+USER laradock
 
-CMD /usr/sbin/sshd -f /etc/ssh/sshd_config -D
+RUN echo "" >> ~/.bashrc && \
+    echo 'export PATH="/var/www/vendor/bin:$PATH"' >> ~/.bashrc
+
+
+USER root
+
+ARG INSTALL_XDEBUG=true
+ARG LARADOCK_PHP_VERSION=8.0
+
+RUN if [ ${INSTALL_XDEBUG} = true ]; then \
+  # Install the xdebug extension
+  if [ $(php -r "echo PHP_MAJOR_VERSION;") = "8" ]; then \
+    pecl install xdebug-3.0.0; \
+  else \
+    if [ $(php -r "echo PHP_MAJOR_VERSION;") = "5" ]; then \
+      pecl install xdebug-2.5.5; \
+    else \
+      if [ $(php -r "echo PHP_MAJOR_VERSION;") = "7" ] && [ $(php -r "echo PHP_MINOR_VERSION;") = "0" ]; then \
+        pecl install xdebug-2.9.0; \
+      else \
+        if [ $(php -r "echo PHP_MAJOR_VERSION;") = "7" ] && [ $(php -r "echo PHP_MINOR_VERSION;") = "1" ]; then \
+          pecl install xdebug-2.9.8; \
+        else \
+          if [ $(php -r "echo PHP_MAJOR_VERSION;") = "7" ]; then \
+            pecl install xdebug-2.9.8; \
+          else \
+            #pecl install xdebug; \
+            echo "xDebug 3 required, not supported."; \
+          fi \
+        fi \
+      fi \
+    fi \
+  fi && \
+  echo "zend_extension=xdebug.so" >> /etc/php/${LARADOCK_PHP_VERSION}/cli/conf.d/20-xdebug.ini \
+;fi
+
+# ADD for REMOTE debugging
+COPY ./xdebug.ini /etc/php/${LARADOCK_PHP_VERSION}/cli/conf.d/xdebug.ini
+
+RUN if [ $(php -r "echo PHP_MAJOR_VERSION;") = "8" ]; then \
+  sed -i "s/xdebug.remote_host=/xdebug.client_host=/" /etc/php/${LARADOCK_PHP_VERSION}/cli/conf.d/xdebug.ini && \
+  sed -i "s/xdebug.remote_connect_back=0/xdebug.discover_client_host=false/" /etc/php/${LARADOCK_PHP_VERSION}/cli/conf.d/xdebug.ini && \
+  sed -i "s/xdebug.remote_port=9000/xdebug.client_port=9003/" /etc/php/${LARADOCK_PHP_VERSION}/cli/conf.d/xdebug.ini && \
+  sed -i "s/xdebug.profiler_enable=0/; xdebug.profiler_enable=0/" /etc/php/${LARADOCK_PHP_VERSION}/cli/conf.d/xdebug.ini && \
+  sed -i "s/xdebug.profiler_output_dir=/xdebug.output_dir=/" /etc/php/${LARADOCK_PHP_VERSION}/cli/conf.d/xdebug.ini && \
+  sed -i "s/xdebug.remote_mode=req/; xdebug.remote_mode=req/" /etc/php/${LARADOCK_PHP_VERSION}/cli/conf.d/xdebug.ini && \
+  sed -i "s/xdebug.remote_autostart=0/xdebug.start_with_request=yes/" /etc/php/${LARADOCK_PHP_VERSION}/cli/conf.d/xdebug.ini && \
+  sed -i "s/xdebug.remote_enable=0/xdebug.mode=debug/" /etc/php/${LARADOCK_PHP_VERSION}/cli/conf.d/xdebug.ini \
+;else \
+  sed -i "s/xdebug.remote_autostart=0/xdebug.remote_autostart=1/" /etc/php/${LARADOCK_PHP_VERSION}/cli/conf.d/xdebug.ini && \
+  sed -i "s/xdebug.remote_enable=0/xdebug.remote_enable=1/" /etc/php/${LARADOCK_PHP_VERSION}/cli/conf.d/xdebug.ini \
+;fi
+RUN sed -i "s/xdebug.cli_color=0/xdebug.cli_color=1/" /etc/php/${LARADOCK_PHP_VERSION}/cli/conf.d/xdebug.ini
+
+USER root
+
+# Clean up
+RUN apt-get clean && \
+    rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/* && \
+    rm /var/log/lastlog /var/log/faillog
+
+# Set default work directory
+WORKDIR /var/www
