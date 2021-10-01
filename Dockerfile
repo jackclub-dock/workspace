@@ -150,4 +150,4 @@ RUN apt-get clean && \
 USER laradock
 # Set default work directory
 WORKDIR /var/www
-CMD ['bash']
+ENTRYPOINT /bin/sh
