@@ -15,7 +15,6 @@ RUN ln -sf /usr/share/zoneinfo/Asia/Shanghai /etc/localtime \
 ARG PUID=1000
 ARG PGID=1000
 
-
 # always run apt update when start and after add new source list, then clean up at end.
 RUN set -xe; \
     apt-get update -yqq && \
