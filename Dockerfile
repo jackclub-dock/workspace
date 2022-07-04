@@ -91,9 +91,15 @@ RUN echo "" >> ~/.bashrc && \
 
 
 USER root
+ARG LARADOCK_PHP_VERSION=8.0
+
+ARG INSTALL_PHPREDIS=true
+
+RUN if [ ${INSTALL_PHPREDIS} = true ]; then \
+    apt-get install -yqq php${LARADOCK_PHP_VERSION}-redis \
+;fi
 
 ARG INSTALL_XDEBUG=true
-ARG LARADOCK_PHP_VERSION=8.0
 
 RUN if [ ${INSTALL_XDEBUG} = true ]; then \
   # Install the xdebug extension
