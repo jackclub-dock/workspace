@@ -7,7 +7,6 @@ MAINTAINER jack "958691165@qq.com"
 ENV DEBIAN_FRONTEND noninteractive
 
 USER root
-
 #时区设置
 RUN ln -sf /usr/share/zoneinfo/Asia/Shanghai /etc/localtime \
     && echo 'Asia/Shanghai' >/etc/timezone
