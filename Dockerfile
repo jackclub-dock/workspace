@@ -14,6 +14,7 @@ RUN ln -sf /usr/share/zoneinfo/Asia/Shanghai /etc/localtime \
 ARG PUID=1000
 ARG PGID=1000
 
+ARG LARADOCK_PHP_VERSION=8.0
 
 # always run apt update when start and after add new source list, then clean up at end.
 RUN set -xe; \
@@ -92,6 +93,7 @@ RUN echo "" >> ~/.bashrc && \
 
 
 USER root
+ARG LARADOCK_PHP_VERSION=8.0
 ARG INSTALL_XDEBUG=true
 
 RUN if [ ${INSTALL_XDEBUG} = true ]; then \
