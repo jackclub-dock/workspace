@@ -38,6 +38,8 @@ RUN set -xe; \
       libzip-dev zip unzip \
       # Install the zip extension
       php${LARADOCK_PHP_VERSION}-zip \
+      # Install the redis extension
+      php${LARADOCK_PHP_VERSION}-redis \
       # nasm
       nasm && \
       php -m | grep -q 'zip'
@@ -90,14 +92,6 @@ RUN echo "" >> ~/.bashrc && \
 
 
 USER root
-ARG LARADOCK_PHP_VERSION=8.0
-
-ARG INSTALL_PHPREDIS=true
-
-RUN if [ ${INSTALL_PHPREDIS} = true ]; then \
-    apt-get install -yqq php${LARADOCK_PHP_VERSION}-redis \
-;fi
-
 ARG INSTALL_XDEBUG=true
 
 RUN if [ ${INSTALL_XDEBUG} = true ]; then \
