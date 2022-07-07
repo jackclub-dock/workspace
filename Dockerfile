@@ -183,7 +183,6 @@ RUN if [ ${INSTALL_INOTIFY} = true ]; then \
 ;fi
 
 USER root
-
 # Clean up
 RUN apt-get clean && \
     rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/* && \
