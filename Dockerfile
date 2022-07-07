@@ -144,6 +144,7 @@ RUN sed -i "s/xdebug.cli_color=0/xdebug.cli_color=1/" /etc/php/${LARADOCK_PHP_VE
 ###########################################################################
 # Swoole EXTENSION
 ###########################################################################
+
 ARG LARADOCK_PHP_VERSION=8.0
 ARG INSTALL_SWOOLE=true
 
@@ -167,6 +168,7 @@ RUN set -eux; \
 ###########################################################################
 # Inotify EXTENSION:
 ###########################################################################
+
 ARG LARADOCK_PHP_VERSION=8.0
 ARG INSTALL_INOTIFY=true
 
