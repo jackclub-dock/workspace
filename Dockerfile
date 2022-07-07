@@ -90,7 +90,6 @@ USER laradock
 RUN echo "" >> ~/.bashrc && \
     echo 'export PATH="/var/www/vendor/bin:$PATH"' >> ~/.bashrc
 
-
 USER root
 ARG LARADOCK_PHP_VERSION=8.0
 ARG INSTALL_XDEBUG=true
