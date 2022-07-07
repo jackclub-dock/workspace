@@ -148,8 +148,7 @@ RUN sed -i "s/xdebug.cli_color=0/xdebug.cli_color=1/" /etc/php/${LARADOCK_PHP_VE
 ARG LARADOCK_PHP_VERSION=8.0
 ARG INSTALL_SWOOLE=true
 
-RUN set -eux; \
-    if [ ${INSTALL_SWOOLE} = true ]; then \
+RUN if [ ${INSTALL_SWOOLE} = true ]; then \
       # Install Php Swoole Extension
       if [ $(php -r "echo PHP_MAJOR_VERSION;") = "5" ]; then \
         echo '' | pecl -q install swoole-2.0.10; \
