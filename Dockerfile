@@ -1,4 +1,4 @@
-ARG LARADOCK_PHP_VERSION=8.0
+ARG LARADOCK_PHP_VERSION=7.2
 FROM laradock/workspace:latest-${LARADOCK_PHP_VERSION}
 
 MAINTAINER jack "958691165@qq.com"
@@ -13,7 +13,7 @@ RUN ln -sf /usr/share/zoneinfo/Asia/Shanghai /etc/localtime \
 
 ARG PUID=1000
 ARG PGID=1000
-ARG LARADOCK_PHP_VERSION=8.0
+ARG LARADOCK_PHP_VERSION=7.2
 
 # always run apt update when start and after add new source list, then clean up at end.
 RUN set -xe; \
@@ -91,7 +91,7 @@ RUN echo "" >> ~/.bashrc && \
     echo 'export PATH="/var/www/vendor/bin:$PATH"' >> ~/.bashrc
 
 USER root
-ARG LARADOCK_PHP_VERSION=8.0
+ARG LARADOCK_PHP_VERSION=7.2
 ARG INSTALL_XDEBUG=true
 
 RUN if [ ${INSTALL_XDEBUG} = true ]; then \
@@ -144,7 +144,7 @@ RUN sed -i "s/xdebug.cli_color=0/xdebug.cli_color=1/" /etc/php/${LARADOCK_PHP_VE
 # Swoole EXTENSION
 ###########################################################################
 
-ARG LARADOCK_PHP_VERSION=8.0
+ARG LARADOCK_PHP_VERSION=7.2
 ARG INSTALL_SWOOLE=true
 
 RUN set -eux; \
@@ -168,7 +168,7 @@ RUN set -eux; \
 # Inotify EXTENSION:
 ###########################################################################
 
-ARG LARADOCK_PHP_VERSION=8.0
+ARG LARADOCK_PHP_VERSION=7.2
 ARG INSTALL_INOTIFY=true
 
 RUN if [ ${INSTALL_INOTIFY} = true ]; then \
