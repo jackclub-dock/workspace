@@ -93,7 +93,7 @@ RUN echo "" >> ~/.bashrc && \
 USER root
 ARG LARADOCK_PHP_VERSION=8.2
 ARG INSTALL_XDEBUG=true
-ARG XDEBUG_PORT=9003
+ARG XDEBUG_PORT=9000
 
 RUN if [ ${INSTALL_XDEBUG} = true ]; then \
   # Install the xdebug extension
