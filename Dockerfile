@@ -91,6 +91,53 @@ RUN echo "" >> ~/.bashrc && \
     echo 'export PATH="/var/www/vendor/bin:$PATH"' >> ~/.bashrc
 
 USER root
+###########################################################################
+# Swoole EXTENSION
+###########################################################################
+
+ARG LARADOCK_PHP_VERSION=8.2
+ARG INSTALL_SWOOLE=true
+
+RUN set -eux; \
+    if [ ${INSTALL_SWOOLE} = true ]; then \
+      # Install Php Swoole Extension
+      if [ $(php -r "echo PHP_MAJOR_VERSION;") = "5" ]; then \
+        echo '' | pecl -q install swoole-2.0.10; \
+      elif [ $(php -r "echo PHP_MAJOR_VERSION;") = "7" ] && [ $(php -r "echo PHP_MINOR_VERSION;") = "0" ]; then \
+        echo '' | pecl -q install swoole-4.3.5; \
+      elif [ $(php -r "echo PHP_MAJOR_VERSION;") = "7" ] && [ $(php -r "echo PHP_MINOR_VERSION;") = "1" ]; then \
+        echo '' | pecl -q install swoole-4.5.11; \
+      else \
+        echo '' | pecl -q install swoole; \
+      fi; \
+      echo "extension=swoole.so" >> /etc/php/${LARADOCK_PHP_VERSION}/mods-available/swoole.ini; \
+      ln -s /etc/php/${LARADOCK_PHP_VERSION}/mods-available/swoole.ini /etc/php/${LARADOCK_PHP_VERSION}/cli/conf.d/20-swoole.ini; \
+      php -m | grep -q 'swoole'; \
+    fi
+
+###########################################################################
+# Inotify EXTENSION:
+###########################################################################
+
+ARG LARADOCK_PHP_VERSION=8.2
+ARG INSTALL_INOTIFY=true
+
+RUN if [ ${INSTALL_INOTIFY} = true ]; then \
+    if [ $(php -r "echo PHP_MAJOR_VERSION;") = "5" ]; then \
+      pecl -q install inotify-0.1.6 && \
+      echo "extension=inotify.so" >> /etc/php/${LARADOCK_PHP_VERSION}/mods-available/inotify.ini && \
+      ln -s /etc/php/${LARADOCK_PHP_VERSION}/mods-available/inotify.ini /etc/php/${LARADOCK_PHP_VERSION}/cli/conf.d/20-inotify.ini; \
+    else \
+      pecl -q install inotify && \
+      echo "extension=inotify.so" >> /etc/php/${LARADOCK_PHP_VERSION}/mods-available/inotify.ini && \
+      ln -s /etc/php/${LARADOCK_PHP_VERSION}/mods-available/inotify.ini /etc/php/${LARADOCK_PHP_VERSION}/cli/conf.d/20-inotify.ini \
+    ;fi \
+;fi
+
+###########################################################################
+# Xdebug EXTENSION:
+###########################################################################
+
 ARG LARADOCK_PHP_VERSION=8.2
 ARG INSTALL_XDEBUG=true
 ARG XDEBUG_PORT=9000
@@ -137,48 +184,6 @@ RUN if [ $(php -r "echo PHP_MAJOR_VERSION;") = "8" ] || { [ $(php -r "echo PHP_M
 ;fi
 RUN sed -i "s/xdebug.cli_color=0/xdebug.cli_color=1/" /etc/php/${LARADOCK_PHP_VERSION}/cli/conf.d/xdebug.ini
 
-###########################################################################
-# Swoole EXTENSION
-###########################################################################
-
-ARG LARADOCK_PHP_VERSION=8.2
-ARG INSTALL_SWOOLE=true
-
-RUN set -eux; \
-    if [ ${INSTALL_SWOOLE} = true ]; then \
-      # Install Php Swoole Extension
-      if [ $(php -r "echo PHP_MAJOR_VERSION;") = "5" ]; then \
-        echo '' | pecl -q install swoole-2.0.10; \
-      elif [ $(php -r "echo PHP_MAJOR_VERSION;") = "7" ] && [ $(php -r "echo PHP_MINOR_VERSION;") = "0" ]; then \
-        echo '' | pecl -q install swoole-4.3.5; \
-      elif [ $(php -r "echo PHP_MAJOR_VERSION;") = "7" ] && [ $(php -r "echo PHP_MINOR_VERSION;") = "1" ]; then \
-        echo '' | pecl -q install swoole-4.5.11; \
-      else \
-        echo '' | pecl -q install swoole; \
-      fi; \
-      echo "extension=swoole.so" >> /etc/php/${LARADOCK_PHP_VERSION}/mods-available/swoole.ini; \
-      ln -s /etc/php/${LARADOCK_PHP_VERSION}/mods-available/swoole.ini /etc/php/${LARADOCK_PHP_VERSION}/cli/conf.d/20-swoole.ini; \
-      php -m | grep -q 'swoole'; \
-    fi
-
-###########################################################################
-# Inotify EXTENSION:
-###########################################################################
-
-ARG LARADOCK_PHP_VERSION=8.2
-ARG INSTALL_INOTIFY=true
-
-RUN if [ ${INSTALL_INOTIFY} = true ]; then \
-    if [ $(php -r "echo PHP_MAJOR_VERSION;") = "5" ]; then \
-      pecl -q install inotify-0.1.6 && \
-      echo "extension=inotify.so" >> /etc/php/${LARADOCK_PHP_VERSION}/mods-available/inotify.ini && \
-      ln -s /etc/php/${LARADOCK_PHP_VERSION}/mods-available/inotify.ini /etc/php/${LARADOCK_PHP_VERSION}/cli/conf.d/20-inotify.ini; \
-    else \
-      pecl -q install inotify && \
-      echo "extension=inotify.so" >> /etc/php/${LARADOCK_PHP_VERSION}/mods-available/inotify.ini && \
-      ln -s /etc/php/${LARADOCK_PHP_VERSION}/mods-available/inotify.ini /etc/php/${LARADOCK_PHP_VERSION}/cli/conf.d/20-inotify.ini \
-    ;fi \
-;fi
 
 # Clean up
 USER root
@@ -188,5 +193,6 @@ RUN apt-get clean && \
 
 # Set default work directory
 WORKDIR /var/www
+ENTRYPOINT /bin/sh
 
 USER laradock
